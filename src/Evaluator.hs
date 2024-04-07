@@ -164,9 +164,9 @@ data Kont where
   InLog   :: !VEnv -> !Kont -> Kont
   InError :: !VEnv -> !Kont -> Kont
 
-
   InSyntaxErrorMessage   :: ![Core] -> !VEnv -> !Kont -> Kont
   InSyntaxErrorLocations :: !Syntax -> ![Core] -> ![Syntax] -> !VEnv -> !Kont -> Kont
+  deriving Show
 
 -- | The state of the evaluator
 data EState where
@@ -178,6 +178,7 @@ data EState where
   -- returning a value up the stack
   Er   :: !EvalError -> !VEnv -> !Kont -> EState
   -- ^ 'Er', meaning that we are in an error state and running the debugger
+  deriving Show
 
 
 -- -----------------------------------------------------------------------------
