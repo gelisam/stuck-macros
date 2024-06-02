@@ -8,10 +8,27 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  CEK Machine
+-- Copyright   :  (c) Jeffrey M. Young
+--                    Samuel Gélineau
+--                    David Thrane Christiansen
+-- License     :  BSD-style (see the file LICENSE)
+--
+-- Maintainer  :  Jeffrey Young      <jeffrey.young@iohk.io>
+--                Samuel Gélineau    <gelisam@gmail.com>
+--                David Christiansen <david@davidchristiansen.dk>
+-- Stability   :  experimental
+--
+-- Converting state from the CEK machine to stack trace
+-----------------------------------------------------------------------------
+
+
 {- Note [The CEK interpreter]:
 
-The Klister interpreter is a straightforward implementation of a CEK
-interpreter. The interpreter keeps three kinds of state:
+The Klister interpreter is a straightforward implementation of a CEK machine.
+The interpreter keeps three kinds of state:
 
 -- C: Control      ::= The thing that is being evaluated
 -- E: Environment  ::= The interpreter environment
@@ -29,7 +46,7 @@ https://felleisen.org/matthias/4400-s20/lecture23.html
 
 The bird's eye view:
 
-The evaluator crawl's the input AST and progresses in three modes:
+The evaluator crawls the input AST and progresses in three modes:
 
 -- 'Down': meaning that the evaluator is searching for a redex to evaluate and
 -- therefore moving "down" the AST.
@@ -50,18 +67,22 @@ allows the evaluator to know exactly what needs to happen in order to continue.
 module Evaluator
   ( EvalError (..)
   , EvalResult (..)
+  , EState (..)
+  , Kont (..)
+  , VEnv
   , TypeError (..)
   , evaluate
   , evaluateIn
   , evaluateWithExtendedEnv
   , evalErrorType
   , evalErrorText
-  , projectError
   , erroneousValue
   , applyInEnv
   , apply
   , doTypeCase
   , try
+  , projectError
+  , projectKont
   ) where
 
 import Control.Lens hiding (List, elements)
@@ -79,6 +100,8 @@ import Syntax
 import Syntax.SrcLoc
 import Type
 import Value
+
+import Debug.Trace
 
 -- -----------------------------------------------------------------------------
 -- Interpreter Data Types
@@ -659,11 +682,6 @@ evaluateWithExtendedEnv env exts = evaluateIn (inserter exts)
   where
     inserter = foldl' (\acc (n,x,v) -> Env.insert x n v acc) env
 
--- TODO DYG: Move to separate module
-projectError :: EState -> EvalError
-projectError (Er err _env _k) = err
-projectError _                = error "debugger: impossible"
-
 erroneousValue :: EvalError -> Value
 erroneousValue (EvalErrorCase _loc v) = v
 erroneousValue (EvalErrorIdent v)     = v
@@ -671,3 +689,12 @@ erroneousValue  _                     =
   error $ mconcat [ "erroneousValue: "
                   , "Evaluator concluded in an error that did not return a value"
                   ]
+
+projectError :: EState -> EvalError
+projectError (Er err _env _kont) = err
+projectError _                   = error "projectError not used on an error!"
+
+projectKont :: EState -> Kont
+projectKont (Er _ _ k) = k
+projectKont (Up _ _ k) = k
+projectKont (Down _ _ k) = k

@@ -6,7 +6,16 @@
 {-# LANGUAGE ParallelListComp #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns #-}
-module Pretty (Doc, Pretty(..), string, text, viaShow, (<+>), (<>), align, hang, line, group, vsep, hsep, VarInfo(..), pretty, prettyPrint, prettyPrintLn, prettyEnv, prettyPrintEnv) where
+module Pretty
+  ( Doc
+  , Pretty(..)
+  , string
+  , text
+  , viaShow
+  , (<+>), (<>), align, hang, line, group, vsep, hsep
+  , VarInfo(..)
+  , pretty, prettyPrint, prettyPrintLn, prettyEnv, prettyPrintEnv
+  ) where
 
 import Control.Lens hiding (List)
 import Control.Monad.State
@@ -26,7 +35,7 @@ import Binding.Info
 import Core
 import Datatype
 import Env
-import Evaluator (EvalResult(..), EvalError(..), TypeError(..))
+import Evaluator (EvalResult(..), EvalError(..), TypeError(..), Kont(..), EState(..))
 import Kind
 import Module
 import ModuleName
@@ -626,6 +635,7 @@ instance Pretty VarInfo EvalError where
     group $ hang 2 $ vsep [pp env loc <> ":", pp env msg]
   pp env (EvalErrorIdent v) = text "Attempt to bind identifier to non-value: " <+> pp env v
 
+
 instance Pretty VarInfo EvalResult where
   pp env (ExampleResult loc valEnv coreExpr sch val) =
     let varEnv = fmap (const ()) valEnv
@@ -675,3 +685,23 @@ instance Pretty VarInfo ScopeSet where
 
 instance Pretty VarInfo KlisterPathError where
   pp _ = ppKlisterPathError
+
+-- -----------------------------------------------------------------------------
+-- StackTraces
+
+newtype StackTrace = StackTrace { unStackTrace :: EState }
+
+instance Pretty VarInfo StackTrace where
+  pp env st = printStack env (unStackTrace st)
+
+printStack :: Env Var () -> EState -> Doc VarInfo
+printStack e (Er err env k) = hang 2 $ pp e err
+
+-- printKont :: Kont -> Doc ann
+-- printKont = align . vsep
+
+-- printErr :: EvalError -> Doc ann
+-- printErr = pretty
+
+-- printEnv :: VEnv -> Doc ann
+-- printEnv = pretty

@@ -42,6 +42,7 @@ common deps
     megaparsec           >= 7.0.5 && < 9.7,
     mtl                  >= 2.2.2 && < 2.4,
     prettyprinter        >= 1.2 && < 1.8,
+    prettyprinter        >= 1.2 && < 1.8,
     text                 >= 1.2,
     transformers         ^>= 0.6
 
@@ -60,6 +61,7 @@ library
       Core
       Core.Builder
       Datatype
+      Debugger
       Env
       Evaluator
       Expander

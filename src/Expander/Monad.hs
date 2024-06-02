@@ -864,11 +864,11 @@ clearTasks = modifyState $ set expanderTasks []
 evalInCurrentPhase :: Core -> Expand Value
 evalInCurrentPhase evalAction = do
   env <- currentEnv
-  let out = evaluateIn env evalAction
-  case out of
-    Left err -> do
+  case evaluateIn env evalAction of
+    Left e_state -> do
       p <- currentPhase
-      throwError $ MacroEvaluationError p $ projectError err
+      throwError $ MacroEvaluationError p $ projectError e_state
+      liftIO $ putStrLn $ pretty e_state
     Right val -> return val
 
 currentTransformerEnv :: Expand TEnv
