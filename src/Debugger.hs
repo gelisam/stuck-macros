@@ -30,6 +30,8 @@ import Data.Bifunctor
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader (ReaderT)
+import qualified Control.Monad.Trans.State.Lazy   as LazyState
+import qualified Control.Monad.Trans.State.Strict as StrictState
 import qualified Control.Monad.Trans.Reader as Reader
 -- -----------------------------------------------------------------------------
 -- Types
@@ -78,6 +80,14 @@ instance MonadDebugger e m => MonadDebugger e (ReaderT r m) where
   debug = lift . debug
   catch = Reader.liftCatch catch
 
+instance MonadDebugger e m => MonadDebugger e (LazyState.StateT s m) where
+  debug = lift . debug
+  catch = LazyState.liftCatch catch
+
+instance MonadDebugger e m => MonadDebugger e (StrictState.StateT s m) where
+  debug = lift . debug
+  catch = StrictState.liftCatch catch
+  
 class (Monad io, MonadIO io) => MonadDebugger e io | io -> e where
   -- conceptually this is throw
   debug :: e -> io a
