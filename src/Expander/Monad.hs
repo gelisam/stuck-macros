@@ -867,7 +867,6 @@ evalInCurrentPhase evalAction = do
   case evaluateIn env evalAction of
     Left e_state -> do
       p <- currentPhase
-      liftIO $ putStrLn "here!"
       debug $ MacroEvaluationError p $ projectError e_state
     Right val -> return val
 

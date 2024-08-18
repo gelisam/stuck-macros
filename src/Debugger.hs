@@ -87,7 +87,7 @@ instance MonadDebugger e m => MonadDebugger e (LazyState.StateT s m) where
 instance MonadDebugger e m => MonadDebugger e (StrictState.StateT s m) where
   debug = lift . debug
   catch = StrictState.liftCatch catch
-  
+
 class (Monad io, MonadIO io) => MonadDebugger e io | io -> e where
   -- conceptually this is throw
   debug :: e -> io a
@@ -112,6 +112,13 @@ initialContext = DebugContext mempty
 -- checkError :: Debug e (Maybe e)
 -- checkError = R.asks _currentError
 
+-- DYG next:
+-- - instead of projecting the error in debug invocations (see line 870 in Expander.Monad)
+-- - we record the stack trace
+-- - also merge catch and debug. In the debugger as envisioned these are the same things
+-- - can we write a combinator that wraps a computation with a standard handler?
+-- - I definitely believe we can, there are likely classes of handlers, with the simplest
+-- - one being throwError that just reports the error.
 
 -- -----------------------------------------------------------------------------
 -- Top level API
