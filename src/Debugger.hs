@@ -1,7 +1,8 @@
-{-# LANGUAGE  DeriveAnyClass             #-}
 {-# LANGUAGE  DerivingStrategies         #-}
+{-# LANGUAGE  FlexibleInstances          #-}
 {-# LANGUAGE  FunctionalDependencies     #-}
 {-# LANGUAGE  ScopedTypeVariables        #-}
+{-# LANGUAGE  UndecidableInstances       #-}
 
 -----------------------------------------------------------------------------
 -- |
@@ -20,36 +21,33 @@
 -----------------------------------------------------------------------------
 
 
-module Debugger
-  ( -- enterDebugger
-  ) where
+module Debugger where
+  -- DYG explicit export list
 
 import Evaluator
 
 import Data.Bifunctor
-import Control.Monad.Reader (ReaderT, MonadReader)
 import Control.Monad.IO.Class
-import Control.Monad.Error.Class
-import qualified Control.Monad.Reader as R
-
-
-
+import Control.Monad.Trans.Class
+import Control.Monad.Trans.Reader (ReaderT)
+import qualified Control.Monad.Trans.Reader as Reader
 -- -----------------------------------------------------------------------------
 -- Types
 
+
 -- conceptually this is a ReaderT (DebugContext e) (ExceptT e) IO a but I've
 -- just fused the transformers and to have more control over the monad instance
-newtype Debug r e a = Debug { runDebugT :: r -> IO (Either e a)
-                              }
-
-runDebug :: Debug r e a -> r -> IO (Either e a)
-runDebug = runDebugT
+newtype Debug r e a = Debug { runDebug :: r -> IO (Either e a)
+                            }
 
 debugRunT :: r -> Debug r e a -> IO (Either e a)
-debugRunT = flip runDebugT
+debugRunT = flip runDebug
 
 mapDebugT :: (a -> b) -> Debug r e a -> Debug r e b
-mapDebugT f = Debug . fmap (fmap (second f)) . runDebugT
+mapDebugT f = Debug . fmap (fmap (second f)) . runDebug
+
+withDebug :: (r' -> r) -> Debug r e a -> Debug r' e a
+withDebug f m = Debug $ runDebug m . f
 
 instance Functor (Debug r e) where
   fmap = mapDebugT
@@ -76,20 +74,29 @@ instance Monad (Debug r e) where
 instance MonadIO (Debug r e) where
   liftIO = Debug . const . fmap Right
 
+instance MonadDebugger e m => MonadDebugger e (ReaderT r m) where
+  debug = lift . debug
+  catch = Reader.liftCatch catch
+
 class (Monad io, MonadIO io) => MonadDebugger e io | io -> e where
   -- conceptually this is throw
-  enter :: e -> m a
+  debug :: e -> io a
   -- conceptually this is catch with a handler
-  catch :: m a -> (e -> m b) -> m b
+  catch :: io a -> (e -> io a) -> io a
 
+instance MonadDebugger e (Debug r e) where
+  debug e = Debug $ const (return (Left e))
+  catch (Debug m) hndl  = Debug $ \r -> do
+    a <- m r
+    case a of
+      Left e -> runDebug (hndl e) r
+      v@Right{} -> return v
 
-data DebugContext e = DebugContext { _currentError :: Maybe e
-                                   , _stackTrace   :: [EState]
-                                   }
-                      deriving (Semigroup, Monoid)
+data DebugContext = DebugContext { _stackTrace   :: [EState]
+                                 }
 
-initialContext :: DebugContext e
-initialContext = mempty
+initialContext :: DebugContext
+initialContext = DebugContext mempty
 
 
 -- checkError :: Debug e (Maybe e)
