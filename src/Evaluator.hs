@@ -203,7 +203,6 @@ data EState where
   -- ^ 'Er', meaning that we are in an error state and running the debugger
   deriving Show
 
-
 -- -----------------------------------------------------------------------------
 -- The evaluator. The CEK machine is a state machine, the @step@ function moves
 -- the state machine a single step of evaluation. This is the heart of the

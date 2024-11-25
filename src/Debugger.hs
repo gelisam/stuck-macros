@@ -38,18 +38,22 @@ import qualified Control.Monad.Trans.Reader as Reader
 
 
 -- conceptually this is a ReaderT (DebugContext e) (ExceptT e) IO a but I've
--- just fused the transformers and to have more control over the monad instance
+-- just fused the transformers to have more control over the monad instance
 newtype Debug r e a = Debug { runDebug :: r -> IO (Either e a)
                             }
 
 debugRunT :: r -> Debug r e a -> IO (Either e a)
 debugRunT = flip runDebug
 
+{-# INLINE mapDebugT #-}
 mapDebugT :: (a -> b) -> Debug r e a -> Debug r e b
 mapDebugT f = Debug . fmap (fmap (second f)) . runDebug
 
 withDebug :: (r' -> r) -> Debug r e a -> Debug r' e a
 withDebug f m = Debug $ runDebug m . f
+
+ask' :: Debug r e r
+ask' = Debug $ \r -> return $ Right r
 
 instance Functor (Debug r e) where
   fmap = mapDebugT
@@ -88,13 +92,17 @@ instance MonadDebugger e m => MonadDebugger e (StrictState.StateT s m) where
   debug = lift . debug
   catch = StrictState.liftCatch catch
 
+-- | Type class that defines the interface for any debugger. Each instance is a
+-- debugger in their own right
 class (Monad io, MonadIO io) => MonadDebugger e io | io -> e where
   -- conceptually this is throw
   debug :: e -> io a
   -- conceptually this is catch with a handler
   catch :: io a -> (e -> io a) -> io a
 
-instance MonadDebugger e (Debug r e) where
+-- | This debugger is the simplest debugger. It accepts no user inputs, instead
+-- it only reports whatever stack trace its recorded.
+instance MonadDebugger e (Debug DebugContext e) where
   debug e = Debug $ const (return (Left e))
   catch (Debug m) hndl  = Debug $ \r -> do
     a <- m r
@@ -104,6 +112,7 @@ instance MonadDebugger e (Debug r e) where
 
 data DebugContext = DebugContext { _stackTrace   :: [EState]
                                  }
+                    deriving Show
 
 initialContext :: DebugContext
 initialContext = DebugContext mempty

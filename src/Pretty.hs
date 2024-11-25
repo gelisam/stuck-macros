@@ -146,6 +146,7 @@ instance (PrettyBinder VarInfo typePat, PrettyBinder VarInfo pat, Pretty VarInfo
          ]
   pp _env (CoreString str) = text (T.pack (show str))
   pp env (CoreError what) =
+    -- set error to bold and red
     text "error" <+> pp env what
   pp env (CorePureMacro arg) =
     text "pure" <+> pp env arg

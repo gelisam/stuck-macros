@@ -561,7 +561,7 @@ initializeKernel outputChannel = do
                         ident = view closureIdent clos
                         body = view closureBody clos
                     case (evaluateWithExtendedEnv env [(ident, var, vx)] body) of
-                      Left err -> error (T.unpack (pretty $ projectError err))
+                      Left err -> error (T.unpack (pretty err))
                       Right vioy -> pure vioy
                 let ValueIOAction my = vioy
                 my
@@ -912,13 +912,12 @@ runTask (tid, localData, task) = withLocal localData $ do
               forkInterpretMacroAction dest nextStep kont
             otherVal -> do
               p <- currentPhase
-              debug $ MacroEvaluationError p $ evalErrorType "macro action" otherVal
+              -- debug $ MacroEvaluationError p $ evalErrorType "macro action" otherVal
+              error "MacroEvaluationError p $ evalErrorType \"macro action\" otherVal"
           Left err -> do
             -- an error occurred in the evaluator, so just report it
             p <- currentPhase
-            debug
-              $ MacroEvaluationError p
-              $ projectError err
+            debug $ MacroEvaluationError p err
     AwaitingMacro dest (TaskAwaitMacro b v x deps mdest stx) -> do
       newDeps <- concat <$> traverse dependencies deps
       case newDeps of
@@ -983,23 +982,21 @@ runTask (tid, localData, task) = withLocal localData $ do
           forkExpandSyntax dest syntax
         other -> do
           p <- currentPhase
-          debug $ MacroEvaluationError p $ evalErrorType "syntax" other
+          -- debug $ MacroEvaluationError p $ evalErrorType "syntax" other
+          error "MacroEvaluationError p $ evalErrorType \"syntax\" other"
     ContinueMacroAction dest value (closure:kont) -> do
       case apply closure value of
         Left err -> do
           p <- currentPhase
-          debug
-            $ MacroEvaluationError p
-            $ evalErrorType "macro action"
-            $ erroneousValue
-            $ projectError err
+          debug $ MacroEvaluationError p err
         Right v ->
           case v of
             ValueMacroAction macroAction -> do
               forkInterpretMacroAction dest macroAction kont
             other -> do
               p <- currentPhase
-              debug $ MacroEvaluationError p $ evalErrorType "macro action" other
+              -- debug $ MacroEvaluationError p $ evalErrorType "macro action" other
+              error "MacroEvaluationError p $ evalErrorType \"macro action\" other"
     EvalDefnAction x n p expr ->
       linkedCore expr >>=
       \case
@@ -1317,10 +1314,7 @@ expandOneForm prob stx
                           $ ValueSyntax
                           $ addScope p stepScope stx
               case macroVal of
-                Left err -> debug
-                            $ ValueNotMacro
-                            $ erroneousValue
-                            $ projectError err
+                Left err -> debug $ ValueNotMacro err
                 Right mv  -> case mv of
                   ValueMacroAction act ->
                     interpretMacroAction prob act >>= \case
@@ -1331,13 +1325,15 @@ expandOneForm prob stx
                         ValueSyntax expansionResult ->
                           forkExpandSyntax prob (flipScope p stepScope expansionResult)
                         other -> debug $ ValueNotSyntax other
-                  other ->
-                    debug $ ValueNotMacro other
-            Nothing ->
-              debug $ InternalError $
+                  other -> error "ValueNotMacro other"
+                    -- debug $ ValueNotMacro other
+            Nothing -> error $ show $ InternalError $
               "No transformer yet created for " ++ shortShow ident ++
               " (" ++ show transformerName ++ ") at phase " ++ shortShow p
-            Just other -> debug $ ValueNotMacro other
+              -- debug $ InternalError $
+              -- "No transformer yet created for " ++ shortShow ident ++
+              -- " (" ++ show transformerName ++ ") at phase " ++ shortShow p
+            Just other -> error "debug $ ValueNotMacro other"
   | otherwise =
     case prob of
       ModuleDest {} ->
@@ -1419,14 +1415,11 @@ interpretMacroAction prob =
                     view (expanderWorld . worldEnvironments . at phase) $ s
           case applyInEnv env closure boundResult of
             -- FIXME DYG: what error to throw here
-            Left err -> debug
-              $ ValueNotMacro
-              $ erroneousValue
-              $ projectError err
+            Left err -> debug $ ValueNotMacro err
             Right v  ->
               case v of
                 ValueMacroAction act -> interpretMacroAction prob act
-                other -> debug $ ValueNotMacro other
+                other -> debug $ ValueNotMacro (Up other mempty Halt)
     MacroActionSyntaxError syntaxError ->
       debug $ MacroRaisedSyntaxError syntaxError
     MacroActionIdentEq how v1 v2 -> do

@@ -867,7 +867,7 @@ evalInCurrentPhase evalAction = do
   case evaluateIn env evalAction of
     Left e_state -> do
       p <- currentPhase
-      debug $ MacroEvaluationError p $ projectError e_state
+      debug $ MacroEvaluationError p e_state
     Right val -> return val
 
 currentTransformerEnv :: Expand TEnv
