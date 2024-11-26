@@ -1,0 +1,3 @@
+Expected 3 entries between parentheses, but got
+  #[error-in-arg.kl:3.28-3.45]
+   <(#%app + (error msg) 1)>

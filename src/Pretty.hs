@@ -12,7 +12,7 @@ module Pretty
   , string
   , text
   , viaShow
-  , (<+>), (<>), align, hang, line, group, vsep, hsep
+  , (<+>), (<>), align, hang, line, group, vsep, hsep, hardline
   , VarInfo(..)
   , pretty, prettyPrint, prettyPrintLn, prettyEnv, prettyPrintEnv
   ) where
@@ -211,7 +211,7 @@ class PrettyBinder ann a | a -> ann where
 instance PrettyBinder VarInfo a => PrettyBinder VarInfo (TyF a) where
   ppBind env t =
     let subs = ppBind env <$> t
-    in (pp env (fst <$> subs), foldMap snd subs) 
+    in (pp env (fst <$> subs), foldMap snd subs)
 
 newtype BinderPair = BinderPair (Ident, Var)
 
@@ -686,23 +686,3 @@ instance Pretty VarInfo ScopeSet where
 
 instance Pretty VarInfo KlisterPathError where
   pp _ = ppKlisterPathError
-
--- -----------------------------------------------------------------------------
--- StackTraces
-
-newtype StackTrace = StackTrace { unStackTrace :: EState }
-
-instance Pretty VarInfo StackTrace where
-  pp env st = printStack env (unStackTrace st)
-
-printStack :: Env Var () -> EState -> Doc VarInfo
-printStack e (Er err env k) = hang 2 $ pp e err
-
--- printKont :: Kont -> Doc ann
--- printKont = align . vsep
-
--- printErr :: EvalError -> Doc ann
--- printErr = pretty
-
--- printEnv :: VEnv -> Doc ann
--- printEnv = pretty
