@@ -303,8 +303,10 @@ printStack e (Up val env k)     = hang 2 $ text "up"
 printStack e (Down thing env k) = hang 2 $ text "down"
 
 printKont _ Halt              = text "Halt"
-printKont e (InArg fun env k) = text "with function" <+> pp e fun <> pp e k
 printKont e (InFun arg env k) = text "with arg"      <+> pp e arg <> pp e k
+printKont e (InArg fun env k) = text "with function" <+> pp e fun <> pp e k
+printKont e (InLetDef name var body env k) = text "in let" <+> pp e name
+  <> pp e body <> pp e k
 
 -- printErr :: EvalError -> Doc ann
 -- printErr = pretty
