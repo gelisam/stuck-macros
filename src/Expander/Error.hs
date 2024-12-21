@@ -307,6 +307,10 @@ printKont e (InFun arg env k) = text "with arg"      <+> pp e arg <> pp e k
 printKont e (InArg fun env k) = text "with function" <+> pp e fun <> pp e k
 printKont e (InLetDef name var body env k) = text "in let" <+> pp e name
   <> pp e body <> pp e k
+printKont e (InCtor f_vals cons f_to_go env k) =
+  let position = length f_vals + 1
+  in text "in constructor" <+>
+  align (vsep [pp e cons,  text "in position" <+> viaShow position]) <> pp e k
 
 -- printErr :: EvalError -> Doc ann
 -- printErr = pretty
