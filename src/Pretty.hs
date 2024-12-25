@@ -9,10 +9,11 @@
 module Pretty
   ( Doc
   , Pretty(..)
+  , ppBind
   , string
   , text
   , viaShow
-  , (<+>), (<>), align, hang, line, group, vsep, hsep, hardline
+  , (<+>), (<>), align, hang, line, group, vsep, hsep, hardline, nest
   , VarInfo(..)
   , pretty, prettyPrint, prettyPrintLn, prettyEnv, prettyPrintEnv
   ) where

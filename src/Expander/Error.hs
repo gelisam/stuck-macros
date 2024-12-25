@@ -1,5 +1,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE DerivingStrategies    #-}
+{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings     #-}
 module Expander.Error
@@ -294,23 +295,43 @@ instance Pretty VarInfo Kont where
   pp env k = hardline <> text "----" <+> printKont env k
 
 -- printStack :: p -> EState -> Doc ann
-printStack e (Er err env k) =
+printStack e (Er err _env k) =
   vsep [ pp e err
        , text "stack trace:"
        ] <> pp e k
 
-printStack e (Up val env k)     = hang 2 $ text "up"
-printStack e (Down thing env k) = hang 2 $ text "down"
+printStack _ Up{}   = hang 2 $ text "up"
+printStack _ Down{} = hang 2 $ text "down"
 
-printKont _ Halt              = text "Halt"
-printKont e (InFun arg env k) = text "with arg"      <+> pp e arg <> pp e k
-printKont e (InArg fun env k) = text "with function" <+> pp e fun <> pp e k
-printKont e (InLetDef name var body env k) = text "in let" <+> pp e name
+printKont _ Halt               = text "Halt"
+printKont e (InFun arg _env k) = text "with arg"      <+> pp e arg <> pp e k
+printKont e (InArg fun _env k) = text "with function" <+> pp e fun <> pp e k
+printKont e (InLetDef name var body _env k) = text "in let" <+> pp e name
   <> pp e body <> pp e k
-printKont e (InCtor f_vals cons f_to_go env k) =
-  let position = length f_vals + 1
+printKont e (InCtor field_vals con _f_to_process _env k) =
+  let position = length field_vals + 1
   in text "in constructor" <+>
-  align (vsep [pp e cons,  text "in position" <+> viaShow position]) <> pp e k
+  align (vsep [pp e con,  text "in field" <+> viaShow position]) <> pp e k
+printKont e (InCaseScrut cases loc _env k) =
+  let do_case c = (fst $ ppBind e (fst c)) <> pp e (snd c)
+  in text "in case" <> pp e loc <> foldMap do_case cases <> pp e k
+printKont e (InCasePattern p k) =
+  let ppPattern = \case
+        SyntaxPatternIdentifier i _   -> pp e i
+        SyntaxPatternInteger i _      -> pp e i
+        SyntaxPatternString i _       -> pp e i
+        SyntaxPatternCons il _iv rl _rv -> pp e il <> pp e rl
+        SyntaxPatternList ls          -> foldMap (\(i, _) -> pp e i) ls
+        SyntaxPatternAny              -> text "_"
+        SyntaxPatternEmpty            -> text "()"
+  in text "in case pattern" <> ppPattern p <> pp e k
+printKont e (InDataCasePattern p k) =
+  let ppPattern = \case
+        CtorPattern c _ps  -> pp e c
+        PatternVar i _v    -> pp e i
+  in text "in data case pattern: "
+     <> ppPattern (unConstructorPattern p)
+     <> pp e k
 
 -- printErr :: EvalError -> Doc ann
 -- printErr = pretty

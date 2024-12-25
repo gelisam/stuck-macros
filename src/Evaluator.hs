@@ -159,6 +159,14 @@ data Kont where
   InDataCaseScrut :: ![(ConstructorPattern, Core)] -> !SrcLoc -> !VEnv -> !Kont -> Kont
   InTypeCaseScrut :: ![(TypePattern, Core)] -> !SrcLoc -> !VEnv -> !Kont -> Kont
 
+  {- Note [InCasePattern
+     In case pattern is strictly not necessary, we could do this evalaution in
+     the host's runtime instead of in the evaluator but doing so would mean that
+     the debugger would not be able to capture the pattern that was matched.
+  -}
+  InCasePattern     :: !SyntaxPattern -> !Kont -> Kont
+  InDataCasePattern :: !ConstructorPattern -> !Kont -> Kont
+
   -- lists
   InConsHd :: !Core -> !(CoreF TypePattern ConstructorPattern Core) -> !VEnv -> !Kont -> Kont
   InConsTl :: !Core -> !Syntax -> !VEnv -> !Kont -> Kont
@@ -245,6 +253,9 @@ step (Up v e k) =
       (\good -> Up (ValueMacroAction $ MacroActionTypeCase e loc good cs) env kont)
       (\err  -> Er err env kont)
 
+    -- Case passthroughs, see the Note [InCasePattern]
+    (InCasePattern _ kont)            -> Up v e kont
+    (InDataCasePattern _ kont)        -> Up v e kont
 
     -- Idents
     (InIdent scope env kont) -> case v of
@@ -605,34 +616,34 @@ doCase :: SrcLoc -> Value -> [(SyntaxPattern, Core)] -> VEnv -> Kont -> EState
 doCase blameLoc v0 []               e  kont = Er (EvalErrorCase blameLoc v0) e kont
 doCase blameLoc v0 ((p, rhs0) : ps) e  kont = match (doCase blameLoc v0 ps e kont) p rhs0 v0 e kont
   where
-    match next (SyntaxPatternIdentifier n x) rhs scrutinee env k =
+    match next pat@(SyntaxPatternIdentifier n x) rhs scrutinee env k =
       case scrutinee of
         v@(ValueSyntax (Syntax (Stx _ _ (Id _)))) ->
-          step $ Down (unCore rhs) (extend n x v env) k
+          step $ Down (unCore rhs) (extend n x v env) (InCasePattern pat k)
         _ -> next
-    match next (SyntaxPatternInteger n x) rhs scrutinee env k =
+    match next pat@(SyntaxPatternInteger n x) rhs scrutinee env k =
       case scrutinee of
         ValueSyntax (Syntax (Stx _ _ (Integer int))) ->
-          step $ Down (unCore rhs) (extend n x (ValueInteger int) env) k
+          step $ Down (unCore rhs) (extend n x (ValueInteger int) env) (InCasePattern pat k)
         _ -> next
-    match next (SyntaxPatternString n x) rhs scrutinee env k =
+    match next pat@(SyntaxPatternString n x) rhs scrutinee env k =
       case scrutinee of
         ValueSyntax (Syntax (Stx _ _ (String str))) ->
-          step $ Down (unCore rhs) (extend n x (ValueString str) env) k
+          step $ Down (unCore rhs) (extend n x (ValueString str) env) (InCasePattern pat k)
         _ -> next
     match next SyntaxPatternEmpty rhs scrutinee env k =
       case scrutinee of
         (ValueSyntax (Syntax (Stx _ _ (List [])))) ->
-          step $ Down (unCore rhs) env k
+          step $ Down (unCore rhs) env (InCasePattern SyntaxPatternEmpty k)
         _ -> next
-    match next (SyntaxPatternCons nx x nxs xs) rhs scrutinee env k =
+    match next pat@(SyntaxPatternCons nx x nxs xs) rhs scrutinee env k =
       case scrutinee of
         (ValueSyntax (Syntax (Stx scs loc (List (v:vs))))) ->
           let mkEnv = extend nx x (ValueSyntax v)
                     . extend nxs xs (ValueSyntax (Syntax (Stx scs loc (List vs))))
-          in step $ Down (unCore rhs) (mkEnv env) k
+          in step $ Down (unCore rhs) (mkEnv env) (InCasePattern pat k)
         _ -> next
-    match next (SyntaxPatternList xs) rhs scrutinee env k =
+    match next pat@(SyntaxPatternList xs) rhs scrutinee env k =
       case scrutinee of
         (ValueSyntax (Syntax (Stx _ _ (List vs))))
           | length vs == length xs ->
@@ -640,15 +651,15 @@ doCase blameLoc v0 ((p, rhs0) : ps) e  kont = match (doCase blameLoc v0 ps e kon
                        | (n,x) <- xs
                        | v     <- vs
                        ]
-            in step $ Down (unCore rhs) (vals `extends` env) k
+            in step $ Down (unCore rhs) (vals `extends` env) (InCasePattern pat k)
         _ -> next
     match _next SyntaxPatternAny rhs _scrutinee env k =
-      step $ Down (unCore rhs) env k
+      step $ Down (unCore rhs) env (InCasePattern SyntaxPatternAny k)
 
 doDataCase :: SrcLoc -> Value -> [(ConstructorPattern, Core)] -> VEnv -> Kont -> EState
 doDataCase loc v0 [] env kont = Er (EvalErrorCase loc v0) env kont
 doDataCase loc v0 ((pat, rhs) : ps) env kont =
-  match (doDataCase loc v0 ps env kont) (\newEnv -> step $ Down (unCore rhs) newEnv kont) [(unConstructorPattern pat, v0)]
+  match (doDataCase loc v0 ps env kont) (\newEnv -> step $ Down (unCore rhs) newEnv (InDataCasePattern pat kont)) [(unConstructorPattern pat, v0)]
   where
     match
       :: EState {- ^ Failure continuation -}
