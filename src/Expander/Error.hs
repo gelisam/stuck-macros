@@ -303,18 +303,30 @@ printStack e (Er err _env k) =
 printStack _ Up{}   = hang 2 $ text "up"
 printStack _ Down{} = hang 2 $ text "down"
 
+-- the basics
 printKont _ Halt               = text "Halt"
 printKont e (InFun arg _env k) = text "with arg"      <+> pp e arg <> pp e k
 printKont e (InArg fun _env k) = text "with function" <+> pp e fun <> pp e k
-printKont e (InLetDef name var body _env k) = text "in let" <+> pp e name
+printKont e (InLetDef name _var body _env k) = text "in let" <+> pp e name
   <> pp e body <> pp e k
+
+-- constructors
 printKont e (InCtor field_vals con _f_to_process _env k) =
   let position = length field_vals + 1
   in text "in constructor" <+>
   align (vsep [pp e con,  text "in field" <+> viaShow position]) <> pp e k
+
+-- cases
 printKont e (InCaseScrut cases loc _env k) =
   let do_case c = (fst $ ppBind e (fst c)) <> pp e (snd c)
   in text "in case" <> pp e loc <> foldMap do_case cases <> pp e k
+-- TODO: DYG: is data|type case different than case in the concrete syntax?
+printKont e (InDataCaseScrut cases loc _env k) =
+  let do_case c = (fst $ ppBind e (fst c)) <> pp e (snd c)
+  in text "in data case" <> pp e loc <> foldMap do_case cases <> pp e k
+printKont e (InTypeCaseScrut cases loc _env k) =
+  let do_case c = (fst $ ppBind e (fst c)) <> pp e (snd c)
+  in text "in type case" <> pp e loc <> foldMap do_case cases <> pp e k
 printKont e (InCasePattern p k) =
   let ppPattern = \case
         SyntaxPatternIdentifier i _   -> pp e i
@@ -333,11 +345,66 @@ printKont e (InDataCasePattern p k) =
      <> ppPattern (unConstructorPattern p)
      <> pp e k
 
--- printErr :: EvalError -> Doc ann
--- printErr = pretty
+-- pairs
+-- TODO: DYG: how to test the cons?
+printKont e (InConsHd scope hd _env k) =
+  vsep [ text "in head of pair"
+       , nest 2 $ pp e hd
+       , text "in scope"
+       , nest 2 $ pp e scope
+       ]
+     <> pp e k
+printKont e (InConsTl scope hd _env k) =
+  vsep [ text "in tail of pair"
+       , nest 2 $ pp e hd
+       , text "in scope"
+       , nest 2 $ pp e scope
+       ]
+     <> pp e k
 
--- printEnv :: VEnv -> Doc ann
--- printEnv = pretty
+-- lists
+printKont e (InList scope _todos dones _env k) =
+  vsep [ text "in list"
+       , nest 2 $ foldMap (pp e) dones
+       , text "in scope"
+       , nest 2 $ pp e scope
+       ]
+     <> pp e k
 
--- START: implement printer for the rest of kont indentation was clobbered by
--- the 'group' operation
+-- idents
+-- TODO: DYG: how to report?
+printKont e (InIdent scope _env k) =
+  vsep [ text "in ident"
+       , text "in scope"
+       , nest 2 $ pp e scope
+       ]
+     <> pp e k
+printKont e (InIdentEqL _how scope _env k) =
+  vsep [ text "in ident eq left"
+       , text "in scope"
+       , nest 2 $ pp e scope
+       ]
+     <> pp e k
+printKont e (InIdentEqR other _how _env k) =
+  vsep [ text "in ident eq right, comparing: " <> pp e other
+       ]
+     <> pp e k
+
+-- macros
+printKont e (InPureMacro env k) =
+  vsep [ text "in pure macro"  -- TODO: needs a passthrough?
+       ]
+     <> pp e k
+printKont e (InBindMacroHd tl env k) =
+  vsep [ text "in bind macro head"  -- TODO: needs a passthrough?
+       , pp e tl
+       ]
+     <> pp e k
+printKont e (InBindMacroTl action env k) =
+  vsep [ text "in bind macro tail"  -- TODO: needs a passthrough?
+       , pp e action
+       ]
+     <> pp e k
+
+
+-- START: figure out how to test the cons cases

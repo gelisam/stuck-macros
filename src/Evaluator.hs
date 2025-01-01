@@ -159,8 +159,8 @@ data Kont where
   InDataCaseScrut :: ![(ConstructorPattern, Core)] -> !SrcLoc -> !VEnv -> !Kont -> Kont
   InTypeCaseScrut :: ![(TypePattern, Core)] -> !SrcLoc -> !VEnv -> !Kont -> Kont
 
-  {- Note [InCasePattern
-     In case pattern is strictly not necessary, we could do this evalaution in
+  {- Note [InCasePattern]
+     In case pattern is strictly not necessary, we could do this evaluation in
      the host's runtime instead of in the evaluator but doing so would mean that
      the debugger would not be able to capture the pattern that was matched.
   -}
