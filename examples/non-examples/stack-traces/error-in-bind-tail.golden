@@ -1,0 +1,5 @@
+pure #[error-in-bind-tail.kl:3.22-3.35]
+      <hello-go-boom>
+>>=
+#<closure> : ∀(α : *).
+ (Macro α)

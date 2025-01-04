@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ParallelListComp #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -687,3 +688,145 @@ instance Pretty VarInfo ScopeSet where
 
 instance Pretty VarInfo KlisterPathError where
   pp _ = ppKlisterPathError
+
+-- -----------------------------------------------------------------------------
+-- StackTraces
+
+instance Pretty VarInfo EState where
+  pp env st = printStack env st
+
+instance Pretty VarInfo Kont where
+  pp env k = hardline <> text "----" <+> printKont env k
+
+printStack :: Env Var () -> EState -> Doc VarInfo
+printStack e (Er err _env k) =
+  vsep [ pp e err
+       , text "stack trace:"
+       ] <> pp e k
+printStack _ Up{}   = hang 2 $ text "up"
+printStack _ Down{} = hang 2 $ text "down"
+
+printKont :: Env Var () -> Kont -> Doc VarInfo
+-- the basics
+printKont _ Halt               = text "Halt"
+printKont e (InFun arg _env k) = text "with arg"      <+> pp e arg <> pp e k
+printKont e (InArg fun _env k) = text "with function" <+> pp e fun <> pp e k
+printKont e (InLetDef name _var body _env k) = text "in let" <+> pp e name
+  <> pp e body <> pp e k
+
+-- constructors
+printKont e (InCtor field_vals con _f_to_process _env k) =
+  let position = length field_vals + 1
+  in text "in constructor" <+>
+  align (vsep [pp e con,  text "in field" <+> viaShow position]) <> pp e k
+
+-- cases
+printKont e (InCaseScrut cases loc _env k) =
+  let do_case c = (fst $ ppBind e (fst c)) <> pp e (snd c)
+  in text "in case" <> pp e loc <> foldMap do_case cases <> pp e k
+-- TODO: DYG: is data|type case different than case in the concrete syntax?
+printKont e (InDataCaseScrut cases loc _env k) =
+  let do_case c = (fst $ ppBind e (fst c)) <> pp e (snd c)
+  in text "in data case" <> pp e loc <> foldMap do_case cases <> pp e k
+printKont e (InTypeCaseScrut cases loc _env k) =
+  let do_case c = (fst $ ppBind e (fst c)) <> pp e (snd c)
+  in text "in type case" <> pp e loc <> foldMap do_case cases <> pp e k
+printKont e (InCasePattern p k) =
+  let ppPattern = \case
+        SyntaxPatternIdentifier i _   -> pp e i
+        SyntaxPatternInteger i _      -> pp e i
+        SyntaxPatternString i _       -> pp e i
+        SyntaxPatternCons il _iv rl _rv -> pp e il <> pp e rl
+        SyntaxPatternList ls          -> foldMap (\(i, _) -> pp e i) ls
+        SyntaxPatternAny              -> text "_"
+        SyntaxPatternEmpty            -> text "()"
+  in text "in case pattern" <> ppPattern p <> pp e k
+printKont e (InDataCasePattern p k) =
+  let ppPattern = \case
+        CtorPattern c _ps  -> pp e c
+        PatternVar i _v    -> pp e i
+  in text "in data case pattern: "
+     <> ppPattern (unConstructorPattern p)
+     <> pp e k
+
+-- pairs
+-- TODO: DYG: how to test the cons?
+printKont e (InConsHd scope hd _env k) =
+  vsep [ text "in head of pair"
+       , nest 2 $ pp e hd
+       , text "in scope"
+       , nest 2 $ pp e scope
+       ]
+     <> pp e k
+printKont e (InConsTl scope hd _env k) =
+  vsep [ text "in tail of pair"
+       , nest 2 $ pp e hd
+       , text "in scope"
+       , nest 2 $ pp e scope
+       ]
+     <> pp e k
+
+-- lists
+printKont e (InList scope _todos dones _env k) =
+  vsep [ text "in list"
+       , nest 2 $ foldMap (pp e) dones
+       , text "in scope"
+       , nest 2 $ pp e scope
+       ]
+     <> pp e k
+
+-- idents
+-- TODO: DYG: how to report and test these?
+printKont e (InIdent scope _env k) =
+  vsep [ text "in ident"
+       , text "in scope"
+       , nest 2 $ pp e scope
+       ]
+     <> pp e k
+printKont e (InIdentEqL _how scope _env k) =
+  vsep [ text "in ident eq left"
+       , text "in scope"
+       , nest 2 $ pp e scope
+       ]
+     <> pp e k
+printKont e (InIdentEqR other _how _env k) =
+  vsep [ text "in ident eq right, comparing: " <> pp e other
+       ]
+     <> pp e k
+
+-- macros
+printKont e (InPureMacro _env k) =
+  vsep [ text "in pure macro"  -- TODO: needs a passthrough?
+       ]
+     <> pp e k
+printKont e (InBindMacroHd tl _env k) =
+  vsep [ text "in bind macro head"  -- TODO: needs a passthrough?
+       , pp e tl
+       ]
+     <> pp e k
+printKont e (InBindMacroTl action _env k) =
+  vsep [ text "in bind macro tail"  -- TODO: needs a passthrough?
+       , pp e action
+       ]
+     <> pp e k
+
+-- atomics
+printKont e (InInteger _ _ k) = pp e k
+printKont e (InString  _ _ k) = pp e k
+printKont e (InReplaceLocL _ _ k) = pp e k
+printKont e (InReplaceLocR _ _ k) = pp e k
+
+-- scope
+printKont e (InScope scope _env k) =
+  vsep [ text "in scope"
+       , pp e scope
+       ]
+     <> pp e k
+
+-- others
+printKont e (InLog _ k) = pp e k -- would require a passthrough
+printKont e (InError _ k) = pp e k
+printKont e (InSyntaxErrorMessage _ _ k) = pp e k
+printKont e (InSyntaxErrorLocations _ _ _ _ k) = pp e k
+
+-- START: figure out how to test the cons cases
