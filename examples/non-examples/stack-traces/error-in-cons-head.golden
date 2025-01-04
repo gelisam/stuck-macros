@@ -1,6 +1,2 @@
-/home/doyougnu/programming/klister/examples/non-examples/stack-traces/error-in-cons-head.kl:12:11:
-   |
-12 |       [(l . j) (error 'Im-an-error)]
-   |           ^
-unexpected '.'
-expecting "#%app", "#%integer-literal", "#%module", "#%string-literal", ",@", "...", '"', ''', '(', ')', '+', ',', '-', '[', '`', identifier-initial character, or integer (digits)
+Unknown: #[error-in-cons-head.kl:8.6-8.9]
+          <car>

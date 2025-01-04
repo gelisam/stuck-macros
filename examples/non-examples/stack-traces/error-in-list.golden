@@ -1,2 +1,5 @@
-Internal error during expansion! This is a bug in the implementation.
-All patterns should be identifier-headed
+Error at phase p0:
+    error-in-list.kl:7.27-7.38:
+      Im-an-error
+    stack trace:
+    ---- Halt

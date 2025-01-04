@@ -1,2 +1,6 @@
-Unknown: #[error-in-pure-macro.kl:26.10-26.11]
-          <x>
+Error at phase p0:
+    error-in-pure-macro.kl:3.24-3.38:
+      surprise-error
+    stack trace:
+    ---- in pure macro
+    ---- Halt
