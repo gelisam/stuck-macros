@@ -83,6 +83,7 @@ module Evaluator
   , try
   , projectError
   , projectKont
+  , constructErrorType
   ) where
 
 import Control.Lens hiding (List, elements)
@@ -101,8 +102,6 @@ import Syntax.SrcLoc
 import Type
 import Value
 
-import Debug.Trace
-
 -- -----------------------------------------------------------------------------
 -- Interpreter Data Types
 
@@ -119,7 +118,6 @@ data TypeError = TypeError
   , _typeErrorActual   :: Type
   }
   deriving (Eq, Show)
-makeLenses ''TypeError
 
 data EvalError
   = EvalErrorUnbound Var
@@ -578,9 +576,21 @@ extends exts env = foldl' (\acc (n,x,v) -> Env.insert x n v acc) env exts
 evalErrorType :: Text -> Value -> EvalError
 evalErrorType expected got =
   EvalErrorType $ TypeError
-    { _typeErrorExpected = expected
-    , _typeErrorActual   = describeVal got
-    }
+  { _typeErrorExpected = expected
+  , _typeErrorActual   = describeVal got
+  }
+
+-- this is a copy of 'evalErrorType' but with no memory of how we got to this
+-- error state. This should just be a stopgap and we should remove it. Its sole
+-- use case is in the expander where we have redundant error checks due to
+-- functions such as @doTypeCase@
+constructErrorType :: Text -> Value -> EState
+constructErrorType expected got = Er err mempty Halt
+  where
+    err = EvalErrorType $ TypeError
+      { _typeErrorExpected = expected
+      , _typeErrorActual   = describeVal got
+      }
 
 doTypeCase :: VEnv -> SrcLoc -> Ty -> [(TypePattern, Core)] -> Either EState Value
 -- We pass @Right $ ValueType v0@ here so that the Core type-case still matches
