@@ -1,5 +1,4 @@
 Error at phase p0:
-    error-in-list.kl:7.27-7.38:
-      Im-an-error
+    error-in-list.kl:7.27-7.38: Im-an-error
     stack trace:
     ---- Halt

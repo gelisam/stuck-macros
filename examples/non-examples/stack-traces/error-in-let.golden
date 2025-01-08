@@ -1,8 +1,6 @@
 Error at phase p0:
-    error-in-let.kl:4.42-4.53:
-      Im-an-error
+    error-in-let.kl:4.42-4.53: Im-an-error
     stack trace:
     ---- with function #<closure>
-    ---- in let #[error-in-let.kl:4.22-4.24]
-                 <go>!!(Var 382159)!!
+    ---- in let #[error-in-let.kl:4.22-4.24]<go>!!(Var 382123)!!
     ---- Halt

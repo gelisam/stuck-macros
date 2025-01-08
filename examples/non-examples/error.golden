@@ -1,1 +1,4 @@
-Error at phase p0: error.kl:3.18-3.34: "It went wrong."
+Error at phase p0:
+    error.kl:3.18-3.34: "It went wrong."
+    stack trace:
+    ---- Halt
