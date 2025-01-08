@@ -654,11 +654,11 @@ getDecl ptr =
     zonkDecl (Example loc schPtr e) =
       linkedCore e >>=
       \case
-        Nothing -> debug $ InternalError "Missing expr after expansion"
+        Nothing -> debug . InternalError $ "Missing expr after expansion at: " <> show loc
         Just e' ->
           linkedScheme schPtr >>=
           \case
-            Nothing -> debug $ InternalError "Missing example scheme after expansion"
+            Nothing -> debug . InternalError $ "Missing example scheme after expansion: " <> show loc
             Just (Scheme ks t) -> do
               ks' <- traverse zonkKindDefault ks
               pure $ CompleteDecl $ Example loc (Scheme ks' t) e'
