@@ -73,6 +73,7 @@ import Numeric.Natural
 import Binding
 import Core
 import Datatype
+import Debugger
 import qualified Env
 import Expander.DeclScope
 import Expander.Monad
@@ -518,7 +519,7 @@ typeConstructor ctor argKinds = (implT, implP)
     implT k dest stx = do
       Stx _ _ (_, args) <- mustBeCons stx
       if length args > length argKinds
-        then throwError $ WrongTypeArity stx ctor
+        then debug $ WrongTypeArity stx ctor
                             (fromIntegral $ length argKinds)
                             (length args)
         else do
@@ -530,7 +531,7 @@ typeConstructor ctor argKinds = (implT, implP)
     implP dest stx = do
       Stx _ _ (_, args) <- mustBeCons stx
       if length args > length argKinds
-        then throwError $ WrongTypeArity stx ctor
+        then debug $ WrongTypeArity stx ctor
                             (fromIntegral $ length argKinds)
                             (length args)
         else do
@@ -588,7 +589,7 @@ makeLocalType dest stx = do
         _ <- mustBeIdent tstx
         linkType tdest $ TyF t []
   let patImpl _ tstx =
-        throwError $ NotValidType tstx
+        debug $ NotValidType tstx
 
   p <- currentPhase
   addLocalBinding n b
@@ -687,7 +688,7 @@ expandPatternCase t (Stx _ _ (lhs, rhs)) = do
       rhsDest <- schedule t rhs
       return (SyntaxPatternAny, rhsDest)
     other ->
-      throwError $ UnknownPattern other
+      debug $ UnknownPattern other
 
 scheduleDataPattern ::
   Ty -> Ty ->

@@ -1,0 +1,8 @@
+#lang "prelude.kl"
+
+(example
+  (>>= (pure 'hello-go-boom)
+    (lambda (x)
+      (>>= (syntax-error x)
+      -- TODO: why doesn't this work?
+        (lambda (y) (pure y))))))

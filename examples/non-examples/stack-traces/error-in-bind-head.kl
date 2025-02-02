@@ -1,0 +1,3 @@
+#lang "prelude.kl"
+
+(example (>>= (pure (error 'e)) (lambda (x) (pure x))))

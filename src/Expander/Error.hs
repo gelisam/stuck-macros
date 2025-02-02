@@ -1,5 +1,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE DerivingStrategies    #-}
+{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings     #-}
 module Expander.Error
@@ -50,8 +51,8 @@ data ExpansionErr
   | NotExportSpec Syntax
   | UnknownPattern Syntax
   | MacroRaisedSyntaxError (SyntaxError Syntax)
-  | MacroEvaluationError Phase EvalError
-  | ValueNotMacro Value
+  | MacroEvaluationError Phase EState
+  | ValueNotMacro EState
   | ValueNotSyntax Value
   | ImportError KlisterPathError
   | InternalError String
