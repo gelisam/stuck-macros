@@ -529,7 +529,7 @@ applyInEnv old_env (FO (FOClosure {..})) value =
   let env = Env.insert _closureVar
                        _closureIdent
                        value
-                       (_closureEnv <> old_env)
+                       (_closureEnv)
   in evaluateIn env _closureBody
 applyInEnv _ (HO prim) value = return $! prim value
 
