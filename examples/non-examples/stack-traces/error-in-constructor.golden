@@ -3,5 +3,5 @@ Error at phase p0:
     stack trace:
     ---- in constructor pair
                         in field 2
-    ---- in let #[error-in-constructor.kl:17.22-17.24]<go>!!(Var 395561)!!
+    ---- in let #[error-in-constructor.kl:17.22-17.24]<go>
     ---- Halt

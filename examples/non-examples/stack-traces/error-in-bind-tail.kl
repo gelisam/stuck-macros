@@ -3,6 +3,6 @@
 (example
   (>>= (pure 'hello-go-boom)
     (lambda (x)
-      (>>= (syntax-error x)
+      (>>= (pure x)
       -- TODO: why doesn't this work?
-        (lambda (y) (pure y))))))
+        (lambda (y) (error y))))))
