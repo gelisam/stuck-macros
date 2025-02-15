@@ -6,6 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS -Wno-name-shadowing #-}
+
 module Expander.Primitives
   ( -- * Declaration primitives
     define
@@ -748,23 +749,23 @@ primitiveDatatype name args =
 
 unaryIntegerPrim :: (Integer -> Integer) -> Value
 unaryIntegerPrim f =
-  ValueClosure $ HO $
+  ValueClosure $ HO "TODO:Jeff:WHAT-TO-PUT-HERE" $
   \(ValueInteger i) ->
     ValueInteger (f i)
 
 binaryIntegerPrim :: (Integer -> Integer -> Integer) -> Value
 binaryIntegerPrim f =
-  ValueClosure $ HO $
+  ValueClosure $ HO "bil" $
   \(ValueInteger i1) ->
-    ValueClosure $ HO $
+    ValueClosure $ HO "bir" $
     \(ValueInteger i2) ->
       ValueInteger (f i1 i2)
 
 binaryIntegerPred :: (Integer -> Integer -> Bool) -> Value
 binaryIntegerPred f =
-  ValueClosure $ HO $
+  ValueClosure $ HO "bipl" $
   \(ValueInteger i1) ->
-    ValueClosure $ HO $
+    ValueClosure $ HO "bipr" $
     \(ValueInteger i2) ->
       if f i1 i2
         then primitiveCtor "true" []
@@ -773,9 +774,9 @@ binaryIntegerPred f =
 
 binaryStringPred :: (Text -> Text -> Bool) -> Value
 binaryStringPred f =
-  ValueClosure $ HO $
+  ValueClosure $ HO "bsp-l" $
   \(ValueString str1) ->
-    ValueClosure $ HO $
+    ValueClosure $ HO "bsp-r" $
     \(ValueString str2) ->
       if f str1 str2
         then primitiveCtor "true" []

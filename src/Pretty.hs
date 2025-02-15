@@ -523,7 +523,8 @@ instance Pretty VarInfo (ExprF Syntax) where
   pp env (List xs)   = parens (group (vsep (map (pp env . syntaxE) xs)))
 
 instance Pretty VarInfo Closure where
-  pp _ _ = text "#<closure>"
+  pp _ (FO fo) = "#<" <> text (_stxValue (_closureIdent fo)) <> ">"
+  pp _ (HO n _) = "#<" <> text n <> ">"
 
 instance Pretty VarInfo Value where
   pp env (ValueClosure c) = pp env c
@@ -709,10 +710,13 @@ printStack _ Down{} = hang 2 $ text "down"
 printKont :: Env Var () -> Kont -> Doc VarInfo
 -- the basics
 printKont _ Halt               = text "Halt"
+printKont e (InPrim prim k)    = text "in prim"      <+> pp e prim <> pp e k
 printKont e (InFun arg _env k) = text "with arg"      <+> pp e arg <> pp e k
 printKont e (InArg fun _env k) = text "with function" <+> pp e fun <> pp e k
-printKont e (InLetDef name _var body _env k) = text "in let" <+> pp e name
-  <> pp e body <> pp e k
+printKont e (InLetDef name _var _body _env k) = text "in let" <+> pp e name
+  -- TODO: the body prints out uniques instead of the var name
+  -- <> pp e body
+  <> pp e k
 
 -- constructors
 printKont e (InCtor field_vals con _f_to_process _env k) =
@@ -828,5 +832,3 @@ printKont e (InLog _ k) = pp e k -- would require a passthrough
 printKont e (InError _ k) = pp e k
 printKont e (InSyntaxErrorMessage _ _ k) = pp e k
 printKont e (InSyntaxErrorLocations _ _ _ _ k) = pp e k
-
--- START: figure out how to test the cons cases

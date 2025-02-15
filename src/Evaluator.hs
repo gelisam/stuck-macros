@@ -162,6 +162,7 @@ data Kont where
      the host's runtime instead of in the evaluator but doing so would mean that
      the debugger would not be able to capture the pattern that was matched.
   -}
+  InPrim            :: !Text          -> !Kont -> Kont
   InCasePattern     :: !SyntaxPattern -> !Kont -> Kont
   InDataCasePattern :: !ConstructorPattern -> !Kont -> Kont
 
@@ -252,6 +253,7 @@ step (Up v e k) =
       (\err  -> Er err env kont)
 
     -- Case passthroughs, see the Note [InCasePattern]
+    (InPrim _ kont)                   -> Up v e kont
     (InCasePattern _ kont)            -> Up v e kont
     (InDataCasePattern _ kont)        -> Up v e kont
 
@@ -525,13 +527,13 @@ evalAsType v on_success on_error =
     other       -> on_error (evalErrorType "type" other)
 
 applyInEnv :: VEnv -> Closure -> Value -> Either EState Value
-applyInEnv old_env (FO (FOClosure {..})) value =
+applyInEnv _old_env (FO (FOClosure {..})) value =
   let env = Env.insert _closureVar
                        _closureIdent
                        value
                        (_closureEnv)
   in evaluateIn env _closureBody
-applyInEnv _ (HO prim) value = return $! prim value
+applyInEnv _ (HO _n prim) value = return $! prim value
 
 apply :: Closure -> Value -> Either EState Value
 apply (FO (FOClosure {..})) value =
@@ -540,7 +542,7 @@ apply (FO (FOClosure {..})) value =
                        value
                        _closureEnv
   in evaluateIn env _closureBody
-apply (HO prim) value = return $! prim value
+apply (HO _n prim) value = return $! prim value
 
 applyAsClosure :: VEnv -> Value -> Value -> Kont -> EState
 applyAsClosure e v_closure value k = case v_closure of
@@ -550,7 +552,7 @@ applyAsClosure e v_closure value k = case v_closure of
     where app (FO (FOClosure{..})) =
             let env = Env.insert _closureVar _closureIdent value (_closureEnv <> e)
             in Down (unCore _closureBody) env k
-          app (HO prim)            = Up (prim value) mempty k
+          app (HO n prim)            = Up (prim value) mempty (InPrim n k)
 
 -- | predicate to check for done state
 final :: EState -> Bool
